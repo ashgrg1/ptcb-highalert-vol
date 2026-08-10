@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>High-Alert &amp; LASA — Syllable Cards</title>
+<style>
+  :root{
+    --ink:#16233A; --ink-soft:#4A5A73; --paper:#FFFFFF; --bg:#E7ECF2;
+    --line:#D3DBE6; --hot:#E23A3F; --hot-bg:#FCE9E9;
+    --amber:#B5730A; --amber-bg:#FBEBCE; --teal:#0C7A83; --teal-bg:#E1F2F2; --teal-line:#9AD0D3;
+    --shadow:0 18px 40px -18px rgba(22,35,58,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(120% 80% at 50% -10%, #F2F5F9 0%, var(--bg) 60%) fixed;
+    color:var(--ink); min-height:100vh; padding:28px 18px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+
+  header{text-align:center;margin-bottom:22px}
+  .eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  h1{margin:.28em 0 .15em;font-size:clamp(26px,5vw,38px);letter-spacing:-.02em;line-height:1.05}
+  .sub{color:var(--ink-soft);font-size:15px;max-width:52ch;margin:0 auto;line-height:1.5}
+  .legend{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+  .chip{font-size:12px;font-weight:600;border-radius:999px;padding:5px 11px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px}
+  .chip .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .sw.hot{background:var(--hot)} .sw.amber{background:var(--amber)}
+  .chip .caps{font-weight:800;color:var(--ink);letter-spacing:.02em}
+
+  .toolbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:20px 0 16px}
+  .seg{display:flex;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:3px;box-shadow:0 1px 0 rgba(22,35,58,.03)}
+  .seg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--ink-soft);
+    padding:7px 13px;border-radius:8px;cursor:pointer;transition:.15s}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .btn{border:1px solid var(--line);background:var(--paper);font:inherit;font-size:13px;font-weight:600;
+    color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer;transition:.15s;box-shadow:0 1px 0 rgba(22,35,58,.03)}
+  .btn:hover{border-color:#9fb0c6;transform:translateY(-1px)}
+  .counter{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink-soft);font-size:14px;min-width:66px;text-align:center}
+
+  .stage{perspective:1600px;margin:6px auto 0;max-width:640px}
+  .card{position:relative;width:100%;min-height:440px;cursor:pointer;
+    transform-style:preserve-3d;transition:transform .55s cubic-bezier(.6,.02,.2,1)}
+  .card.flipped{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    background:var(--paper);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);
+    padding:28px 26px;display:flex;flex-direction:column}
+  .face.back{transform:rotateY(180deg)}
+
+  .toprow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  .alert{display:none;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.08em;
+    color:var(--amber);background:var(--amber-bg);border:1px solid #EBD3A0;border-radius:999px;padding:4px 10px;text-transform:uppercase}
+  .alert.on{display:inline-flex}
+
+  .pair{flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:center}
+  .name{font-size:clamp(23px,6vw,38px);font-weight:750;letter-spacing:-.01em;line-height:1.1;word-break:break-word}
+  .name .syl{color:var(--ink)}
+  .name .dot{color:#B9C3D2;font-weight:400;margin:0 .06em}
+  .name .hot{color:var(--hot)}
+  .pron{font-size:13.5px;color:var(--ink-soft);font-style:italic;letter-spacing:.01em;margin-top:3px}
+  .pron .st{font-style:normal;font-weight:800;color:var(--ink)}
+  .cls{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin-top:3px}
+
+  .spk{display:inline-flex;align-items:center;gap:6px;margin-top:8px;border:1px solid var(--line);
+    background:var(--paper);color:var(--ink-soft);font:inherit;font-size:12px;font-weight:700;
+    padding:5px 12px;border-radius:999px;cursor:pointer;transition:.15s}
+  .spk:hover{border-color:var(--teal-line);color:var(--teal);background:var(--teal-bg)}
+  .spk.speaking{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+  .spk svg{width:14px;height:14px;display:block}
+  .hearboth{display:inline-flex;align-items:center;gap:7px;margin-top:12px;border:1px solid var(--teal-line);
+    background:var(--teal-bg);color:var(--teal);font:inherit;font-size:13px;font-weight:800;
+    padding:8px 16px;border-radius:999px;cursor:pointer;transition:.15s}
+  .hearboth:hover{filter:brightness(.97);transform:translateY(-1px)}
+  .hearboth svg{width:16px;height:16px}
+
+  .vs{display:flex;align-items:center;justify-content:center;margin:8px 0}
+  .neq{position:relative;width:58px;height:58px;border-radius:50%;
+    background:var(--hot-bg);border:2px solid #F3B9BA;display:grid;place-items:center;flex:none}
+  .neq .glyph{font-size:32px;font-weight:800;color:var(--hot);line-height:1;position:relative}
+  .neq .slash{position:absolute;left:50%;top:50%;width:36px;height:3.5px;background:var(--hot);border-radius:3px;
+    transform:translate(-50%,-50%) rotate(-45deg) scaleX(0);transform-origin:center}
+  .card.animate .neq .slash{animation:strike .5s .35s forwards cubic-bezier(.5,0,.2,1)}
+  @keyframes strike{to{transform:translate(-50%,-50%) rotate(-45deg) scaleX(1)}}
+
+  .foot{text-align:center;margin-top:auto}
+  .warn{font-size:14px;font-weight:700;color:var(--ink)}
+  .warn em{color:var(--hot);font-style:normal}
+  .tap{font-size:12px;color:var(--ink-soft);margin-top:8px;opacity:.9}
+
+  .back .kicker{margin-bottom:14px}
+  .def{border:1px solid var(--line);border-radius:14px;padding:13px 16px;margin-bottom:11px;background:#FCFDFE}
+  .def .tagrow{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:5px}
+  .def .tag{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal);
+    background:var(--teal-bg);border-radius:6px;padding:2px 8px;display:inline-block}
+  .def .say{font-size:12.5px;font-style:italic;color:var(--ink-soft)}
+  .def .say .st{font-style:normal;font-weight:800;color:var(--ink)}
+  .def p{margin:0;font-size:14.5px;color:var(--ink-soft);line-height:1.5}
+  .key{margin-top:auto;background:var(--ink);color:#EAF0F7;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}
+  .key b{color:#fff}
+
+  .markrow{display:flex;gap:10px;justify-content:center;margin-top:18px}
+  .mark{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 16px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+  .mark.know{color:var(--teal)} .mark.know:hover{background:var(--teal-bg);border-color:#9AD0D3}
+  .mark.review{color:var(--hot)} .mark.review:hover{background:var(--hot-bg);border-color:#F0AEB0}
+  .mark.active-know{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .mark.active-review{background:var(--hot);color:#fff;border-color:var(--hot)}
+
+  .hint{text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:18px;line-height:1.5}
+  .hint kbd{background:var(--paper);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-family:ui-monospace,monospace;font-size:11px}
+
+  .sheet{display:none}
+  @media print{
+    body{background:#fff;padding:0}
+    header .legend,.toolbar,.stage,.markrow,.hint{display:none!important}
+    h1{font-size:24px}
+    .sheet{display:block;margin-top:14px}
+    .sheet h2{font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:#444;border-bottom:1px solid #bbb;padding-bottom:4px}
+    .row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:12px}
+    .row .n{font-weight:700} .row .sayp{font-style:italic;color:#666;font-weight:400}
+    .row .neqp{color:#c00;font-weight:800;font-size:16px;text-align:center}
+    .row .d{grid-column:1/-1;color:#555;font-size:11px;margin-top:1px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">PTCB · Patient Safety &amp; Medications</div>
+    <h1>High-Alert &amp; LASA</h1>
+    <p class="sub">Two drugs that <b>look alike</b> and <b>sound alike</b> — split into syllables, with how to say each one, so the difference is impossible to miss. They line up like an equals sign… but they are <b>not</b> equal.</p>
+    <div class="legend">
+      <span class="chip"><span class="sw hot"></span>syllables that differ</span>
+      <span class="chip"><span class="caps">CAPS</span> = stressed syllable</span>
+      <span class="chip"><span class="sw amber"></span>high-alert medication</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Filter">
+      <button data-filter="all" aria-pressed="true">All pairs</button>
+      <button data-filter="high" aria-pressed="false">High-alert only</button>
+    </div>
+    <button class="btn" id="shuffle">↺ Shuffle</button>
+    <button class="btn" id="print">⎙ Print sheet</button>
+  </div>
+
+  <div class="toolbar" style="margin-top:0">
+    <button class="btn" id="prev">‹ Prev</button>
+    <span class="counter" id="counter">1 / 34</span>
+    <button class="btn" id="next">Next ›</button>
+  </div>
+
+  <div class="stage">
+    <div class="card animate" id="card">
+      <div class="face front">
+        <div class="toprow">
+          <span class="kicker">Look-alike / Sound-alike</span>
+          <span class="alert" id="alertF">⚠ High-alert</span>
+        </div>
+        <div class="pair">
+          <div class="name" id="nameA"></div>
+          <div class="pron" id="pronA"></div>
+          <button class="spk" id="spkA" type="button">🔊 Hear it</button>
+          <div class="cls" id="clsA"></div>
+          <div class="vs"><div class="neq"><span class="glyph">=</span><span class="slash"></span></div></div>
+          <div class="name" id="nameB"></div>
+          <div class="pron" id="pronB"></div>
+          <button class="spk" id="spkB" type="button">🔊 Hear it</button>
+          <div class="cls" id="clsB"></div>
+          <div class="name" id="nameC" style="display:none;margin-top:10px"></div>
+          <div class="pron" id="pronC" style="display:none"></div>
+          <button class="spk" id="spkC" type="button" style="display:none">🔊 Hear it</button>
+          <div class="cls" id="clsC" style="display:none"></div>
+        </div>
+        <div class="foot">
+          <button class="hearboth" id="hearBoth" type="button">🔊 Hear both</button>
+          <div class="warn" style="margin-top:12px">Look alike. Sound alike. <em>NOT the same drug.</em></div>
+          <div class="tap">Tap the card to see what each one actually does</div>
+        </div>
+      </div>
+      <div class="face back">
+        <div class="toprow">
+          <span class="kicker">What each one is</span>
+          <span class="alert" id="alertB">⚠ High-alert</span>
+        </div>
+        <div id="defs"></div>
+        <div class="key" id="keyline"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="markrow">
+    <button class="mark know" id="mKnow">✓ I know this</button>
+    <button class="mark review" id="mReview">↻ Needs review</button>
+  </div>
+
+  <div class="hint">
+    <kbd>←</kbd> <kbd>→</kbd> move · <kbd>Space</kbd> flip · <kbd>S</kbd> shuffle &nbsp;·&nbsp;
+    <span id="progress"></span>
+  </div>
+
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+/* syl: syllables · hot: differing syllable indices · pr: pronunciation (|CHUNK| = stressed)
+   is: plain-language meaning · cls: class/schedule · high: high-alert */
+const PAIRS = [
+ {high:false,key:"Antihistamine vs. blood-pressure drug.",
+  a:{syl:["hy","drox","y","zine"],hot:[1,2],pr:"hye-|DROX|-i-zeen",is:"Calms allergies & itching; also anxiety and nausea.",cls:"Antihistamine"},
+  b:{syl:["hy","dral","a","zine"],hot:[1,2],pr:"hye-|DRAL|-a-zeen",is:"Lowers blood pressure by relaxing vessels.",cls:"Antihypertensive (vasodilator)"}},
+
+ {high:false,key:"Blood pressure vs. benzodiazepine.",
+  a:{syl:["clo","ni","dine"],hot:[1,2],pr:"|KLON|-i-deen",is:"Lowers blood pressure; also ADHD and withdrawal.",cls:"Alpha-2 agonist"},
+  b:{syl:["clo","naz","e","pam"],hot:[1,2,3],pr:"kloe-|NAZ|-e-pam",is:"Calms seizures & panic (Klonopin).",cls:"Benzodiazepine · C-IV"}},
+
+ {high:false,key:"Diabetes vs. antibiotic.",
+  a:{syl:["met","for","min"],hot:[1,2],pr:"met-|FOR|-min",is:"Lowers blood sugar in type-2 diabetes.",cls:"Biguanide"},
+  b:{syl:["me","tro","ni","da","zole"],hot:[1,2,3,4],pr:"me-troe-|NI|-da-zole",is:"Kills certain bacteria & parasites (Flagyl).",cls:"Antibiotic"}},
+
+ {high:false,key:"Depression/smoking vs. anxiety.",
+  a:{syl:["bu","pro","pi","on"],hot:[1,2,3],pr:"byoo-|PROE|-pee-on",is:"Antidepressant; also a quit-smoking aid (Wellbutrin/Zyban).",cls:"Aminoketone antidepressant"},
+  b:{syl:["bu","spi","rone"],hot:[1,2],pr:"byoo-|SPYE|-rone",is:"Eases chronic anxiety.",cls:"Anxiolytic"}},
+
+ {high:false,key:"Seizures vs. fungus.",
+  a:{syl:["La","mic","tal"],hot:[1,2],pr:"la-|MIK|-tal",is:"Controls seizures & bipolar (lamotrigine).",cls:"Anticonvulsant"},
+  b:{syl:["Lam","i","sil"],hot:[1,2],pr:"|LAM|-i-sil",is:"Treats fungal infections (terbinafine).",cls:"Antifungal"}},
+
+ {high:false,key:"Same family — different form & strength.",
+  a:{syl:["pred","ni","sone"],hot:[2],pr:"|PRED|-ni-sone",is:"Steroid; the liver activates it.",cls:"Corticosteroid"},
+  b:{syl:["pred","nis","o","lone"],hot:[2,3],pr:"pred-|NIS|-oh-lone",is:"The already-active steroid form.",cls:"Corticosteroid"}},
+
+ {high:false,key:"Pain vs. sleep/depression.",
+  a:{syl:["tra","ma","dol"],hot:[1,2],pr:"|TRAM|-a-dol",is:"Moderate pain relief (opioid-like).",cls:"Opioid analgesic · C-IV"},
+  b:{syl:["tra","zo","done"],hot:[1,2],pr:"|TRAZ|-oh-done",is:"Antidepressant; often used for sleep.",cls:"Antidepressant"}},
+
+ {high:false,key:"Both treat diabetes — different potency.",
+  a:{syl:["gli","pi","zide"],hot:[1,2],pr:"|GLIP|-i-zide",is:"Lowers blood sugar.",cls:"Sulfonylurea"},
+  b:{syl:["gly","bur","ide"],hot:[1,2],pr:"|GLYE|-byoo-ride",is:"Lowers blood sugar — stronger, longer-acting.",cls:"Sulfonylurea"}},
+
+ {high:true,key:"Hydromorphone is far stronger — dose carefully.",
+  a:{syl:["hy","dro","mor","phone"],hot:[0,1],pr:"hye-droe-|MOR|-fone",is:"Very strong opioid — much more potent than morphine (Dilaudid).",cls:"Opioid"},
+  b:{syl:["mor","phine"],hot:[],pr:"|MOR|-feen",is:"Opioid pain reliever.",cls:"Opioid"}},
+
+ {high:false,key:"Mood vs. pain vs. seizures.",
+  a:{syl:["Ce","lex","a"],hot:[1,2],pr:"se-|LEX|-a",is:"Antidepressant (citalopram).",cls:"SSRI"},
+  b:{syl:["Cel","e","brex"],hot:[1,2],pr:"|SEL|-e-brex",is:"Anti-inflammatory pain relief (celecoxib).",cls:"NSAID"},
+  c:{syl:["Cer","e","byx"],hot:[1,2],pr:"|SER|-e-bix",is:"Prevents seizures (fosphenytoin).",cls:"Anticonvulsant"}},
+
+ {high:true,key:"Rapid-acting vs. regular/NPH insulin.",
+  a:{syl:["Hu","ma","log"],hot:[1,2],pr:"|HYOO|-ma-log",is:"Fast-acting insulin — works quickly (lispro).",cls:"Rapid-acting insulin"},
+  b:{syl:["Hu","mu","lin"],hot:[1,2],pr:"|HYOO|-myoo-lin",is:"Human insulin — R (short) or N (intermediate).",cls:"Human insulin"}},
+
+ {high:true,key:"Rapid-acting vs. regular/NPH insulin.",
+  a:{syl:["No","vo","log"],hot:[2],pr:"|NOE|-voe-log",is:"Fast-acting insulin (aspart).",cls:"Rapid-acting insulin"},
+  b:{syl:["No","vo","lin"],hot:[2],pr:"|NOE|-voe-lin",is:"Human insulin — R or N.",cls:"Human insulin"}},
+
+ {high:true,key:"Both chemo — never interchange; mix-ups can be fatal.",
+  a:{syl:["vin","blas","tine"],hot:[1],pr:"vin-|BLAS|-teen",is:"Chemotherapy drug.",cls:"Chemotherapy"},
+  b:{syl:["vin","cris","tine"],hot:[1],pr:"vin-|KRIS|-teen",is:"Chemotherapy drug — different dosing.",cls:"Chemotherapy"}},
+
+ {high:true,key:"Sufentanil is even more potent than fentanyl.",
+  a:{syl:["fen","ta","nyl"],hot:[2],pr:"|FEN|-ta-nil",is:"Very strong opioid.",cls:"Opioid"},
+  b:{syl:["su","fen","ta","nil"],hot:[0,3],pr:"soo-|FEN|-ta-nil",is:"Even stronger opioid.",cls:"Opioid"}},
+
+ {high:false,key:"Muscle relaxant vs. antihistamine.",
+  a:{syl:["cy","clo","ben","za","prine"],hot:[1,2,3,4],pr:"sye-kloe-|BEN|-za-preen",is:"Muscle relaxant (Flexeril).",cls:"Muscle relaxant"},
+  b:{syl:["cy","pro","hep","ta","dine"],hot:[1,2,3,4],pr:"sip-roe-|HEP|-ta-deen",is:"Antihistamine; also boosts appetite.",cls:"Antihistamine"}},
+
+ {high:true,key:"Tylenol partner vs. aspirin partner — matters for allergies.",
+  a:{syl:["Per","co","cet"],hot:[2],pr:"|PER|-koe-set",is:"Oxycodone + acetaminophen (Tylenol).",cls:"Opioid combo · C-II"},
+  b:{syl:["Per","co","dan"],hot:[2],pr:"|PER|-koe-dan",is:"Oxycodone + aspirin.",cls:"Opioid combo · C-II"}},
+
+ {high:false,key:"Stimulant vs. beta-blocker — opposite effects.",
+  a:{syl:["Ad","der","all"],hot:[0,2],pr:"|AD|-er-all",is:"Stimulant for ADHD.",cls:"Amphetamine · C-II"},
+  b:{syl:["In","der","al"],hot:[0,2],pr:"|IN|-der-al",is:"Beta-blocker for BP/heart (propranolol).",cls:"Beta-blocker"}},
+
+ {high:true,key:"Both opioids — different strength & combinations.",
+  a:{syl:["hy","dro","co","done"],hot:[0,1],pr:"hye-droe-|KOE|-done",is:"Opioid pain reliever (often + acetaminophen).",cls:"Opioid · C-II"},
+  b:{syl:["ox","y","co","done"],hot:[0,1],pr:"ox-i-|KOE|-done",is:"Opioid pain reliever — different potency.",cls:"Opioid · C-II"}},
+
+ {high:false,key:"Infection vs. inflammation (bowel/joints).",
+  a:{syl:["sul","fa","di","a","zine"],hot:[2,3],pr:"sul-fa-|DYE|-a-zeen",is:"Antibiotic.",cls:"Sulfonamide antibiotic"},
+  b:{syl:["sul","fa","sal","a","zine"],hot:[2,3],pr:"sul-fa-|SAL|-a-zeen",is:"Anti-inflammatory for IBD & RA.",cls:"Anti-inflammatory"}},
+
+ {high:false,key:"Heart vs. stomach.",
+  a:{syl:["me","to","pro","lol"],hot:[2,3],pr:"me-|TOE|-proe-lol",is:"Beta-blocker for BP & heart.",cls:"Beta-blocker"},
+  b:{syl:["me","to","clo","pra","mide"],hot:[2,3,4],pr:"met-oh-|KLOE|-pra-mide",is:"Helps the stomach empty; anti-nausea (Reglan).",cls:"GI motility / antiemetic"}},
+
+ {high:false,key:"Heartburn vs. anxiety.",
+  a:{syl:["Zan","tac"],hot:[0,1],pr:"|ZAN|-tak",is:"Reduces stomach acid (ranitidine).",cls:"H2 blocker"},
+  b:{syl:["Xan","ax"],hot:[0,1],pr:"|ZAN|-ax",is:"Eases anxiety & panic (alprazolam).",cls:"Benzodiazepine · C-IV"}},
+
+ {high:false,key:"Cholesterol vs. blood pressure.",
+  a:{syl:["Zo","cor"],hot:[0,1],pr:"|ZOE|-cor",is:"Lowers cholesterol (simvastatin).",cls:"Statin"},
+  b:{syl:["Co","zaar"],hot:[0,1],pr:"koe-|ZAR|",is:"Lowers blood pressure (losartan).",cls:"ARB"}},
+
+ {high:false,key:"Both benzos — different onset & duration.",
+  a:{syl:["lor","az","e","pam"],hot:[0,3],pr:"lor-|AZ|-e-pam",is:"Calms anxiety & agitation (Ativan).",cls:"Benzodiazepine · C-IV"},
+  b:{syl:["al","praz","o","lam"],hot:[0,3],pr:"al-|PRAZ|-oh-lam",is:"Eases anxiety & panic (Xanax).",cls:"Benzodiazepine · C-IV"}},
+
+ {high:false,key:"Mental health vs. diabetes.",
+  a:{syl:["chlor","prom","a","zine"],hot:[1,2,3],pr:"klor-|PROE|-ma-zeen",is:"Antipsychotic; also severe nausea.",cls:"Antipsychotic"},
+  b:{syl:["chlor","pro","pa","mide"],hot:[1,2,3],pr:"klor-|PROE|-pa-mide",is:"Lowers blood sugar.",cls:"Sulfonylurea"}},
+
+ {high:true,key:"Both heart/BP drips — different receptors.",
+  a:{syl:["do","pa","mine"],hot:[1,2],pr:"|DOE|-pa-meen",is:"Raises blood pressure & heart output (IV drip).",cls:"Vasopressor"},
+  b:{syl:["do","bu","ta","mine"],hot:[1,2,3],pr:"doe-|BYOO|-ta-meen",is:"Strengthens the heart's pumping (IV drip).",cls:"Inotrope"}},
+
+ {high:true,key:"Emergency epinephrine vs. milder ephedrine.",
+  a:{syl:["ep","i","neph","rine"],hot:[1,2],pr:"ep-i-|NEF|-rin",is:"Emergency drug for allergy & cardiac arrest (EpiPen).",cls:"Adrenergic"},
+  b:{syl:["e","phed","rine"],hot:[1],pr:"e-|FED|-rin",is:"Milder stimulant / decongestant / BP support.",cls:"Adrenergic"}},
+
+ {high:false,key:"Mental health vs. blood pressure.",
+  a:{syl:["que","ti","a","pine"],hot:[1,2,3],pr:"kwe-|TYE|-a-peen",is:"Antipsychotic; sleep & bipolar (Seroquel).",cls:"Antipsychotic"},
+  b:{syl:["quin","a","pril"],hot:[1,2],pr:"|KWIN|-a-pril",is:"Lowers blood pressure.",cls:"ACE inhibitor"}},
+
+ {high:false,key:"Heart vs. Parkinson's.",
+  a:{syl:["car","ve","di","lol"],hot:[1,2,3],pr:"kar-|VE|-di-lol",is:"Beta-blocker for heart failure & BP.",cls:"Beta-blocker"},
+  b:{syl:["car","bi","do","pa"],hot:[1,2,3],pr:"kar-bi-|DOE|-pa",is:"Parkinson's (paired with levodopa).",cls:"Parkinson's agent"}},
+
+ {high:false,key:"Same drug family — different salt/form.",
+  a:{syl:["Dep","a","kote"],hot:[2],pr:"|DEP|-a-kote",is:"Divalproex — seizures, bipolar, migraine.",cls:"Anticonvulsant"},
+  b:{syl:["Dep","a","kene"],hot:[2],pr:"|DEP|-a-keen",is:"Valproic acid — same family, different form.",cls:"Anticonvulsant"}},
+
+ {high:true,key:"Insulin vs. antipsychotic.",
+  a:{syl:["Lan","tus"],hot:[0,1],pr:"|LAN|-tus",is:"Long-acting 24-hr insulin (glargine).",cls:"Basal insulin"},
+  b:{syl:["La","tu","da"],hot:[0,1,2],pr:"la-|TOO|-da",is:"Antipsychotic (lurasidone).",cls:"Antipsychotic"}},
+
+ {high:false,key:"Herpes/shingles vs. CMV.",
+  a:{syl:["val","a","cy","clo","vir"],hot:[1,2],pr:"val-a-|SYE|-kloe-veer",is:"Treats herpes & shingles.",cls:"Antiviral"},
+  b:{syl:["val","gan","ci","clo","vir"],hot:[1,2],pr:"val-gan-|SYE|-kloe-veer",is:"Treats CMV in immunocompromised patients.",cls:"Antiviral"}},
+
+ {high:false,key:"Blood pressure vs. cholesterol.",
+  a:{syl:["Zes","tril"],hot:[1],pr:"|ZES|-tril",is:"Lowers blood pressure (lisinopril).",cls:"ACE inhibitor"},
+  b:{syl:["Ze","ti","a"],hot:[1,2],pr:"ze-|TEE|-a",is:"Lowers cholesterol (ezetimibe).",cls:"Cholesterol absorption inhibitor"}},
+
+ {high:false,key:"Both calcium channel blockers — different use/potency.",
+  a:{syl:["ni","fed","i","pine"],hot:[1,2],pr:"nye-|FED|-i-peen",is:"Lowers blood pressure.",cls:"Calcium channel blocker"},
+  b:{syl:["ni","car","di","pine"],hot:[1,2],pr:"nye-|KAR|-di-peen",is:"Lowers blood pressure.",cls:"Calcium channel blocker"}},
+
+ {high:false,key:"Steroid vs. autoimmune/antimalarial.",
+  a:{syl:["hy","dro","cor","ti","sone"],hot:[2,3],pr:"hye-droe-|KOR|-ti-sone",is:"Steroid for inflammation & allergy.",cls:"Corticosteroid"},
+  b:{syl:["hy","drox","y","chlo","ro","quine"],hot:[1,2,3,4],pr:"hye-drox-ee-|KLOR|-oh-kwin",is:"Autoimmune (lupus/RA) & antimalarial.",cls:"Antimalarial / DMARD"}},
+];
+
+let order = PAIRS.map((_,i)=>i);
+let view = order.slice();
+let idx = 0, filter = 'all';
+const known = new Set(), review = new Set();
+const $ = s=>document.querySelector(s);
+const card = $('#card');
+
+/* ---- VOICE (browser speech synthesis — works offline, no external service) ---- */
+let current = null;
+const TTS = ('speechSynthesis' in window);
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  return vs.find(v=>/en[-_]US/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang)) || null;
+}
+if(TTS && speechSynthesis.onvoiceschanged !== undefined){ speechSynthesis.onvoiceschanged = ()=>{}; }
+function utter(text){
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang='en-US'; u.rate=0.82; u.pitch=1;
+  const v=pickVoice(); if(v) u.voice=v;
+  return u;
+}
+function speakName(text, btn){
+  if(!TTS) return;
+  speechSynthesis.cancel();
+  document.querySelectorAll('.spk.speaking').forEach(b=>b.classList.remove('speaking'));
+  const u = utter(text);
+  if(btn){ btn.classList.add('speaking'); u.onend=u.onerror=()=>btn.classList.remove('speaking'); }
+  speechSynthesis.speak(u);
+}
+function speakSequence(items){
+  if(!TTS) return;
+  speechSynthesis.cancel();
+  items.forEach(t=> speechSynthesis.speak(utter(t)));
+}
+function plainName(d){ return d.syl.join(''); }
+
+function renderName(el, d){
+  el.innerHTML = d.syl.map((s,i)=>{
+    const cls = d.hot.includes(i) ? 'syl hot' : 'syl';
+    return `<span class="${cls}">${s}</span>`;
+  }).join('<span class="dot">·</span>');
+}
+/* pronunciation: |CHUNK| is the stressed syllable → bold */
+function pronHTML(pr){ return pr.replace(/\|([^|]+)\|/g, '<span class="st">$1</span>'); }
+
+function applyFilter(){
+  view = order.filter(i => filter==='all' ? true : PAIRS[i].high);
+  if(view.length===0) view = order.slice();
+  idx = 0;
+}
+
+function show(){
+  const p = PAIRS[view[idx]];
+  current = p;
+  if(TTS){ speechSynthesis.cancel(); document.querySelectorAll('.spk.speaking').forEach(b=>b.classList.remove('speaking')); }
+  card.classList.remove('flipped');
+  renderName($('#nameA'), p.a); $('#pronA').innerHTML = pronHTML(p.a.pr); $('#clsA').textContent = p.a.cls;
+  renderName($('#nameB'), p.b); $('#pronB').innerHTML = pronHTML(p.b.pr); $('#clsB').textContent = p.b.cls;
+  const hasC = !!p.c;
+  ['#nameC','#pronC','#clsC'].forEach(s=> $(s).style.display = hasC?'block':'none');
+  $('#spkC').style.display = (hasC && TTS) ? 'inline-flex' : 'none';
+  if(hasC){ renderName($('#nameC'), p.c); $('#pronC').innerHTML = pronHTML(p.c.pr); $('#clsC').textContent = p.c.cls; }
+  $('#alertF').classList.toggle('on', p.high);
+  $('#alertB').classList.toggle('on', p.high);
+
+  $('#defs').innerHTML = defBlock(p.a) + defBlock(p.b) + (hasC? defBlock(p.c):'');
+  $('#keyline').innerHTML = `<b>Key difference:</b> ${p.key}`;
+
+  $('#counter').textContent = `${idx+1} / ${view.length}`;
+  const gi = view[idx];
+  $('#mKnow').classList.toggle('active-know', known.has(gi));
+  $('#mReview').classList.toggle('active-review', review.has(gi));
+  $('#progress').textContent = `Known ${known.size} · Review ${review.size}`;
+  card.classList.remove('animate'); void card.offsetWidth; card.classList.add('animate');
+}
+function defBlock(d){
+  return `<div class="def"><div class="tagrow"><span class="tag">${d.syl.join('')}</span>`+
+         `<span class="say">${pronHTML(d.pr)}</span></div><p>${d.is}</p></div>`;
+}
+
+card.addEventListener('click', ()=> card.classList.toggle('flipped'));
+$('#next').onclick = ()=>{ idx=(idx+1)%view.length; show(); };
+$('#prev').onclick = ()=>{ idx=(idx-1+view.length)%view.length; show(); };
+$('#shuffle').onclick = ()=>{
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  applyFilter(); show();
+};
+$('#print').onclick = ()=> window.print();
+document.querySelectorAll('.seg button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true');
+    filter = b.dataset.filter; applyFilter(); show();
+  };
+});
+$('#mKnow').onclick = e=>{ e.stopPropagation(); const gi=view[idx]; known.has(gi)?known.delete(gi):(known.add(gi),review.delete(gi)); show(); };
+$('#mReview').onclick = e=>{ e.stopPropagation(); const gi=view[idx]; review.has(gi)?review.delete(gi):(review.add(gi),known.delete(gi)); show(); };
+
+/* voice buttons */
+$('#spkA').onclick = e=>{ e.stopPropagation(); if(current) speakName(plainName(current.a), e.currentTarget); };
+$('#spkB').onclick = e=>{ e.stopPropagation(); if(current) speakName(plainName(current.b), e.currentTarget); };
+$('#spkC').onclick = e=>{ e.stopPropagation(); if(current&&current.c) speakName(plainName(current.c), e.currentTarget); };
+$('#hearBoth').onclick = e=>{
+  e.stopPropagation();
+  if(!current) return;
+  const items=[plainName(current.a), plainName(current.b)];
+  if(current.c) items.push(plainName(current.c));
+  speakSequence(items);
+};
+if(!TTS){ document.querySelectorAll('.spk,.hearboth').forEach(b=> b.style.display='none'); }
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'){ $('#next').click(); }
+  else if(e.key==='ArrowLeft'){ $('#prev').click(); }
+  else if(e.key===' '){ e.preventDefault(); card.classList.toggle('flipped'); }
+  else if(e.key.toLowerCase()==='s'){ $('#shuffle').click(); }
+});
+
+function buildSheet(){
+  let html = '<h2>High-Alert &amp; LASA — quick reference</h2>';
+  const cell = d => `<span class="n">${d.syl.join('·')}</span> <span class="sayp">${d.pr.replace(/\|/g,'')}</span>`;
+  PAIRS.forEach(p=>{
+    const third = p.c ? ` ≠ ${cell(p.c)}` : '';
+    html += `<div class="row">${cell(p.a)}<span class="neqp">≠</span><span>${cell(p.b)}${third}</span>`+
+            `<span class="d">${p.a.is} · ${p.b.is}${p.c?' · '+p.c.is:''} — ${p.key}</span></div>`;
+  });
+  $('#sheet').innerHTML = html;
+}
+
+buildSheet(); applyFilter(); show();
+</script>
+</body>
+</html>
